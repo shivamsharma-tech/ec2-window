@@ -1,0 +1,16 @@
+*{
+    margin: 0;
+    padding: 0;
+    text-align: start;
+}
+form{
+    margin: 0 auto;
+    width: 60%;
+    margin-top: 50px;
+}
+.error{
+    color: red;
+}
+.css-1t1j96h-MuiPaper-root-MuiDialog-paper{
+    max-width: 800px !important;
+}
