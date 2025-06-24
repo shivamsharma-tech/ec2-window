@@ -58,12 +58,12 @@ pipeline {
     steps {
         withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
             sh """
-                ssh -o StrictHostKeyChecking=no -i "$KEY" $EC2_USER@$EC2_IP powershell -Command \"
-                    docker pull $DOCKER_IMAGE:$BUILD_NUMBER;
-                    docker stop ec2-window;
-                    docker rm ec2-window;
+                ssh -o StrictHostKeyChecking=no -i "$KEY" $EC2_USER@$EC2_IP powershell -Command "& {
+                    docker pull $DOCKER_IMAGE:$BUILD_NUMBER
+                    docker stop ec2-window -ErrorAction SilentlyContinue
+                    docker rm ec2-window -ErrorAction SilentlyContinue
                     docker run -d --name ec2-window -p 3000:3000 $DOCKER_IMAGE:$BUILD_NUMBER
-                \"
+                }"
             """
         }
     }
