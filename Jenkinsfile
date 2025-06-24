@@ -54,16 +54,20 @@ pipeline {
             }
         }
 
-        stage('Deploy to AWS EC2') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no -i "$KEY" $EC2_USER@$EC2_IP ^
-                        "docker pull $DOCKER_IMAGE:$BUILD_NUMBER; docker stop ec2-window || exit 0; docker rm ec2-window || exit 0; docker run -d --name ec2-window -p 3000:3000 $DOCKER_IMAGE:$BUILD_NUMBER"
-                    '''
-                }
-            }
+       stage('Deploy to AWS EC2') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
+            sh """
+                ssh -o StrictHostKeyChecking=no -i "$KEY" $EC2_USER@$EC2_IP powershell -Command \"
+                    docker pull $DOCKER_IMAGE:$BUILD_NUMBER;
+                    docker stop ec2-window;
+                    docker rm ec2-window;
+                    docker run -d --name ec2-window -p 3000:3000 $DOCKER_IMAGE:$BUILD_NUMBER
+                \"
+            """
         }
+    }
+}
     }
 
     post {
