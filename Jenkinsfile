@@ -8,7 +8,7 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'Docker-access'
         DOCKER_IMAGE = 'shivamsharam/ec2-window'
-        EC2_CREDENTIALS = 'windows-ec2-key' // Must be SSH private key credential
+        EC2_CREDENTIALS = 'windows-ec2-key'
         EC2_USER = 'Administrator'
         EC2_IP = '51.21.171.137'
     }
@@ -54,20 +54,21 @@ pipeline {
             }
         }
 
-stage('Deploy to AWS EC2') {
-    steps {
-        withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
-            sh """
-                ssh -o StrictHostKeyChecking=no -i "$KEY" $EC2_USER@$EC2_IP powershell -Command \"
-                    docker pull $DOCKER_IMAGE:$BUILD_NUMBER;
-                    docker stop ec2-window -ErrorAction SilentlyContinue;
-                    docker rm ec2-window -ErrorAction SilentlyContinue;
-                    docker run -d --name ec2-window -p 3000:3000 $DOCKER_IMAGE:$BUILD_NUMBER
-                \"
-            """
+        stage('Deploy to AWS EC2') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i "$KEY" $EC2_USER@$EC2_IP ^
+                        powershell -NoProfile -Command "& {
+                            docker pull $DOCKER_IMAGE:$BUILD_NUMBER;
+                            docker stop ec2-window -ErrorAction SilentlyContinue;
+                            docker rm ec2-window -ErrorAction SilentlyContinue;
+                            docker run -d --name ec2-window -p 3000:3000 $DOCKER_IMAGE:$BUILD_NUMBER
+                        }"
+                    """
+                }
+            }
         }
-    }
-}
     }
 
     post {
