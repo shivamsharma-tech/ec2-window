@@ -55,24 +55,25 @@ pipeline {
         }
 
         stage('Deploy to AWS EC2') {
-            options {
-                timeout(time: 2, unit: 'MINUTES') // prevent hanging
-            }
-            steps {
-                echo "🛫 Starting SSH Deployment..."
-                withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
-                    bat """
-                        powershell -Command "icacls '%KEY%' /inheritance:r /grant:r '%USERNAME%:R' /remove:g 'Users'"
-                        ssh -o StrictHostKeyChecking=no -i "%KEY%" %EC2_USER%@%EC2_IP% ^
-                        docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% ^&^& ^
-                        docker stop ec2-window || exit /b 0 ^&^& ^
-                        docker rm ec2-window || exit /b 0 ^&^& ^
-                        docker run -d --name ec2-window -p 3000:3000 %DOCKER_IMAGE%:%BUILD_NUMBER%
-                    """
-                }
-                echo "✅ SSH Deployment Done"
-            }
+    options {
+        timeout(time: 2, unit: 'MINUTES')
+    }
+    steps {
+        echo "🛫 Starting SSH Deployment..."
+        withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
+            bat """
+                powershell -Command "icacls '%KEY%' /inheritance:r /grant:r '%USERNAME%:R' /remove:g 'Users'" && ^
+                ssh -o StrictHostKeyChecking=no -i "%KEY%" %EC2_USER%@%EC2_IP% ^
+                docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% && ^
+                docker stop ec2-window || exit /b 0 && ^
+                docker rm ec2-window || exit /b 0 && ^
+                docker run -d --name ec2-window -p 3000:3000 %DOCKER_IMAGE%:%BUILD_NUMBER%
+            """
         }
+        echo "✅ SSH Deployment Done"
+    }
+}
+
     }
 
     post {
