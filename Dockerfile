@@ -1,29 +1,26 @@
-# Use official Windows container with Node.js
-FROM mcr.microsoft.com/windows/servercore:ltsc2022
+# Use official lightweight Node.js image
+FROM node:18-alpine
 
-SHELL ["powershell", "-Command"]
-
-# Install Node.js manually (replace URL if needed)
-RUN Invoke-WebRequest -Uri https://nodejs.org/dist/v18.20.2/node-v18.20.2-x64.msi -OutFile node.msi ; \
-    Start-Process msiexec.exe -ArgumentList '/qn /i node.msi' -Wait ; \
-    Remove-Item -Force node.msi
-
-# Set work directory
+# Set working directory
 WORKDIR /app
 
-# Copy package.json files and install deps
+# Copy package.json and lock files first (for caching)
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy source and build
-COPY . ./
+# Copy the rest of the application
+COPY . .
+
+# Build the app
 RUN npm run build
 
-# Install serve globally
+# Install serve globally to serve the built files
 RUN npm install -g serve
 
-# Expose port
+# Expose the desired port
 EXPOSE 3000
 
 # Start the server
-CMD serve -s dist -l 3000
+CMD ["serve", "-s", "dist", "-l", "3000"]
