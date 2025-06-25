@@ -8,7 +8,7 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'Docker-access'
         DOCKER_IMAGE = 'shivamsharam/ec2-window'
-        EC2_CREDENTIALS = 'windows-ec2-key'
+        EC2_CREDENTIALS = 'window'
         EC2_USER = 'Administrator'
         EC2_IP = '51.21.171.137'
     }
