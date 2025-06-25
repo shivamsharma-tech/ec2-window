@@ -16,23 +16,21 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
+                bat "docker build -t %DOCKER_IMAGE%:%BUILD_NUMBER% ."
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Docker-access', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-                    bat """
-                        echo ${DOCKERHUB_PASS} | docker login -u ${DOCKERHUB_USER} --password-stdin
-                    """
+                    bat 'echo %DOCKERHUB_PASS% | docker login -u %DOCKERHUB_USER% --password-stdin'
                 }
             }
         }
 
         stage('Push Docker Image to Docker Hub') {
             steps {
-                bat "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                bat "docker push %DOCKER_IMAGE%:%BUILD_NUMBER%"
             }
         }
 
@@ -42,11 +40,11 @@ pipeline {
 
                 withCredentials([sshUserPrivateKey(credentialsId: 'window', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
                     bat """
-                        ssh -o StrictHostKeyChecking=no -i "${KEY_PATH}" ${SSH_USER}@${EC2_IP} ^
-                        docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER} ^
+                        ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %SSH_USER%@%EC2_IP% ^
+                        docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% ^
                         && docker stop ec2-window || exit /b 0 ^
                         && docker rm ec2-window || exit /b 0 ^
-                        && docker run -d --name ec2-window -p 3000:3000 ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        && docker run -d --name ec2-window -p 3000:3000 %DOCKER_IMAGE%:%BUILD_NUMBER%
                     """
                 }
 
@@ -57,7 +55,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment successful! Docker tag: ${BUILD_NUMBER}"
+            echo "✅ Deployment successful! Docker tag: %BUILD_NUMBER%"
         }
         failure {
             echo '❌ Deployment failed. Check logs.'
