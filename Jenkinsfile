@@ -39,13 +39,19 @@ pipeline {
                 echo '🚀 Starting SSH Deployment...'
 
                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
-    bat """
-      ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %SSH_USER%@%EC2_IP% ^
-        docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% ^
-        && docker stop ec2-window || exit /b 0 ^
-        && docker rm ec2-window || exit /b 0 ^
-        && docker run -d --name ec2-window -p 3000:3000 %DOCKER_IMAGE%:%BUILD_NUMBER%
-    """
+    bat '''
+for /f "delims=" %%u in ('whoami') do (
+  echo Updating permissions for %%u
+  icacls "%KEY_PATH%" /inheritance:r
+  icacls "%KEY_PATH%" /grant:r "%%u:R"
+)
+
+ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %SSH_USER%@%EC2_IP% ^
+  docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% ^
+  && docker stop ec2-window || exit /b 0 ^
+  && docker rm ec2-window || exit /b 0 ^
+  && docker run -d --name ec2-window -p 3000:3000 %DOCKER_IMAGE%:%BUILD_NUMBER%
+'''
 }
 
                 echo '✅ SSH Deployment Done'
