@@ -6,17 +6,17 @@ pipeline {
     }
 
     environment {
-        DOCKER_CREDENTIALS_ID = 'Docker-access'           // Your Jenkins DockerHub creds ID
-        DOCKER_IMAGE = 'shivamsharam/ec2-window'          // Docker image name
-        EC2_CREDENTIALS = 'window'               // SSH key creds ID in Jenkins
-        EC2_USER = 'Administrator'                        // EC2 username
-        EC2_IP = '51.21.171.137'                          // Public IP of EC2 instance
+        DOCKER_CREDENTIALS_ID = 'Docker-access'
+        DOCKER_IMAGE = 'shivamsharam/ec2-window'
+        EC2_CREDENTIALS = 'windows' // Jenkins credential ID for SSH private key
+        EC2_USER = 'Administrator'
+        EC2_IP = '51.21.171.137'
     }
 
     stages {
         stage('Test Docker Access') {
             steps {
-                sh 'docker --version && docker ps'
+                bat 'docker --version && docker ps'
             }
         }
 
@@ -28,41 +28,38 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build -t $DOCKER_IMAGE:$BUILD_NUMBER .
-                    docker tag $DOCKER_IMAGE:$BUILD_NUMBER $DOCKER_IMAGE:latest
-                '''
+                bat """
+                    docker build -t %DOCKER_IMAGE%:%BUILD_NUMBER% .
+                    docker tag %DOCKER_IMAGE%:%BUILD_NUMBER% %DOCKER_IMAGE%:latest
+                """
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: env.DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh '''
-                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                    '''
+                    bat """
+                        echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
+                    """
                 }
             }
         }
 
         stage('Push Docker Image to Docker Hub') {
             steps {
-                sh '''
-                    docker push $DOCKER_IMAGE:$BUILD_NUMBER
-                    docker push $DOCKER_IMAGE:latest
-                '''
+                bat """
+                    docker push %DOCKER_IMAGE%:%BUILD_NUMBER%
+                    docker push %DOCKER_IMAGE%:latest
+                """
             }
         }
 
         stage('Deploy to AWS EC2') {
-            options {
-                timeout(time: 2, unit: 'MINUTES')
-            }
             steps {
-                echo "🛫 Starting SSH Deployment..."
+                echo "🚀 Starting SSH Deployment..."
                 withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
                     bat """
-                        powershell -Command "icacls '%KEY%' /inheritance:r /grant:r 'Administrators:R' /remove:g 'Users'" && ^
+                        powershell -Command "icacls %KEY% /inheritance:r /grant:r \\"%COMPUTERNAME%$:(R)\\" /remove:g \\"Users\\"" || echo 'Permission fix failed but continuing...'
                         ssh -o StrictHostKeyChecking=no -i "%KEY%" %EC2_USER%@%EC2_IP% ^
                         docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% && ^
                         docker stop ec2-window || exit /b 0 && ^
@@ -77,7 +74,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment successful! Docker tag: $BUILD_NUMBER"
+            echo "✅ Deployment successful! Docker tag: ${BUILD_NUMBER}"
         }
         failure {
             echo '❌ Deployment failed. Check logs.'
