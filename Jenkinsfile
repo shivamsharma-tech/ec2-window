@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'shivamsharam/ec2-window'
         EC2_IP = '51.21.171.137'
-        EC2_USER = 'Administrator'
+         EC2_USER = 'Administrator'
     }
 
     stages {
@@ -16,7 +16,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t %DOCKER_IMAGE%:%BUILD_NUMBER% ."
+                bat "docker build -t ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} ."
             }
         }
 
@@ -30,7 +30,7 @@ pipeline {
 
         stage('Push Docker Image to Docker Hub') {
             steps {
-                bat "docker push %DOCKER_IMAGE%:%BUILD_NUMBER%"
+                bat "docker push ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}"
             }
         }
 
@@ -38,16 +38,17 @@ pipeline {
             steps {
                 echo '🚀 Starting SSH Deployment...'
 
-                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH', usernameVariable: `{%EC2_USER%}`)]) {
                     bat """
+                        for /f %%u in ('whoami') do set JENKINS_USER=%%u
                         icacls "%KEY_PATH%" /inheritance:r
-                        icacls "%KEY_PATH%" /grant:r "%USERNAME%:R"
+                        icacls "%KEY_PATH%" /grant:r "%JENKINS_USER%:R"
 
-                        ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %SSH_USER%@%EC2_IP% ^
-                        docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% ^
+                        ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %EC2_USER%@${env.EC2_IP} ^
+                        docker pull ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} ^
                         && docker stop ec2-window || exit /b 0 ^
                         && docker rm ec2-window || exit /b 0 ^
-                        && docker run -d --name ec2-window -p 3000:3000 %DOCKER_IMAGE%:%BUILD_NUMBER%
+                        && docker run -d --name ec2-window -p 3000:3000 ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}
                     """
                 }
 
@@ -58,7 +59,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment successful! Docker tag: %BUILD_NUMBER%"
+            echo "✅ Deployment successful! Docker tag: ${env.BUILD_NUMBER}"
         }
         failure {
             echo '❌ Deployment failed. Check logs.'
