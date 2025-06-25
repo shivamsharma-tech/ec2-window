@@ -38,7 +38,7 @@ pipeline {
             steps {
                 echo '🚀 Starting SSH Deployment...'
 
-                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH', usernameVariable: `{%EC2_USER%}`)]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH', usernameVariable: 'EC2_USER')]) {
                     bat """
                         for /f %%u in ('whoami') do set JENKINS_USER=%%u
                         icacls "%KEY_PATH%" /inheritance:r
