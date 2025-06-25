@@ -38,7 +38,7 @@ pipeline {
         stage('Deploy to AWS EC2') {
             steps {
                 echo '🚀 Starting SSH Deployment...'
-                withCredentials([file(credentialsId: 'windows-ec2-key', variable: 'KEY')]) {
+                withCredentials([file(credentialsId: 'window', variable: 'KEY')]) {
                     bat """
                         powershell -Command "icacls '%KEY%' /inheritance:r /grant:r 'NT AUTHORITY\\SYSTEM:R' /remove:g 'Users'" || echo 'Permission fix failed but continuing...'
 
