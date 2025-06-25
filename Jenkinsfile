@@ -40,6 +40,9 @@ pipeline {
 
                 withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
                     bat """
+                        icacls "%KEY_PATH%" /inheritance:r
+                        icacls "%KEY_PATH%" /grant:r "%USERNAME%:R"
+
                         ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %SSH_USER%@%EC2_IP% ^
                         docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% ^
                         && docker stop ec2-window || exit /b 0 ^
