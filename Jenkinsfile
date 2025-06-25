@@ -8,7 +8,7 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'Docker-access'
         DOCKER_IMAGE = 'shivamsharam/ec2-window'
-        EC2_CREDENTIALS = 'windows' // Jenkins credential ID for SSH private key
+        EC2_CREDENTIALS = 'windows-ec2-key'
         EC2_USER = 'Administrator'
         EC2_IP = '51.21.171.137'
     }
@@ -59,7 +59,7 @@ pipeline {
                 echo "🚀 Starting SSH Deployment..."
                 withCredentials([sshUserPrivateKey(credentialsId: env.EC2_CREDENTIALS, keyFileVariable: 'KEY')]) {
                     bat """
-                        powershell -Command "icacls %KEY% /inheritance:r /grant:r \\"%COMPUTERNAME%$:(R)\\" /remove:g \\"Users\\"" || echo 'Permission fix failed but continuing...'
+                        powershell -Command "icacls %KEY% /inheritance:r /grant:r \\"%COMPUTERNAME%\\\$:(R)\\" /remove:g \\"Users\\"" || echo 'Permission fix failed but continuing...'
                         ssh -o StrictHostKeyChecking=no -i "%KEY%" %EC2_USER%@%EC2_IP% ^
                         docker pull %DOCKER_IMAGE%:%BUILD_NUMBER% && ^
                         docker stop ec2-window || exit /b 0 && ^
