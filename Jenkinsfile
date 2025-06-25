@@ -38,17 +38,15 @@ pipeline {
         stage('Deploy to AWS EC2') {
             steps {
                 echo '🚀 Starting SSH Deployment...'
-                withCredentials([file(credentialsId: 'window', variable: 'KEY')]) {
-                    bat """
-                        powershell -Command "icacls '%KEY%' /inheritance:r /grant:r 'NT AUTHORITY\\SYSTEM:R' /remove:g 'Users'" || echo 'Permission fix failed but continuing...'
-
-                        ssh -o StrictHostKeyChecking=no -i "%KEY%" %EC2_USER%@%EC2_IP% ^
-                        docker pull %DOCKER_IMAGE%:${BUILD_NUMBER} && ^
-                        docker stop ec2-window || exit /b 0 && ^
-                        docker rm ec2-window || exit /b 0 && ^
-                        docker run -d --name ec2-window -p 3000:3000 %DOCKER_IMAGE%:${BUILD_NUMBER}
-                    """
-                }
+               withCredentials([sshUserPrivateKey(credentialsId: 'window', keyFileVariable: 'KEY', usernameVariable: 'Administrator')]) {
+    bat """
+        ssh -o StrictHostKeyChecking=no -i "%KEY%" %USER%@${EC2_IP} ^
+        docker pull shivamsharam/ec2-window:${IMAGE_TAG} ^
+        && docker stop ec2-window || exit /b 0 ^
+        && docker rm ec2-window || exit /b 0 ^
+        && docker run -d --name ec2-window -p 3000:3000 shivamsharam/ec2-window:${IMAGE_TAG}
+    """
+}
                 echo '✅ SSH Deployment Done'
             }
         }
