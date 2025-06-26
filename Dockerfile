@@ -1,4 +1,5 @@
-FROM mcr.microsoft.com/windows/servercore:10.0.26100.1
+FROM mcr.microsoft.com/windows/servercore-insider
+
 
 
 ENV NODE_VERSION=18.19.1
