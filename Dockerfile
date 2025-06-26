@@ -1,5 +1,5 @@
 # Use matching Windows Server Core image
-FROM mcr.microsoft.com/windows/servercore:ltsc2022
+FROM mcr.microsoft.com/windows/servercore:10.0.20348.2031
 
 # Define Node.js version
 ENV NODE_VERSION=18.19.1
