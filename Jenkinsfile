@@ -36,9 +36,10 @@ pipeline {
 
         stage('Deploy on EC2') {
             steps {
-                echo Key Path: %KEY_PATH%
                 withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2-key', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
             bat '''
+                echo Key Path: %KEY_PATH%
+
                 echo Deploying to EC2...
                 set KEY_COPY=%WORKSPACE%\\id_rsa
                 copy "%KEY_PATH%" "%KEY_COPY%" > nul
