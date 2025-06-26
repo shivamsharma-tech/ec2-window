@@ -1,4 +1,5 @@
-FROM mcr.microsoft.com/windows/servercore:ltsc2022
+FROM mcr.microsoft.com/windows/servercore:preview
+
 
 ENV NODE_VERSION=18.19.1
 
