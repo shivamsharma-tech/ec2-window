@@ -1,12 +1,9 @@
-FROM mcr.microsoft.com/windows/servercore:10.0.26100.1
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
 ENV NODE_VERSION=18.19.1
 
-# Download and install Node.js silently
-RUN powershell -Command `
-    Invoke-WebRequest -Uri https://nodejs.org/dist/v$env:NODE_VERSION/node-v$env:NODE_VERSION-x64.msi -OutFile nodejs.msi ; `
-    Start-Process msiexec.exe -Wait -ArgumentList '/qn /i nodejs.msi' ; `
-    Remove-Item -Force nodejs.msi
+# ✅ Proper PowerShell syntax in one line inside Dockerfile
+RUN powershell -Command "Invoke-WebRequest -Uri https://nodejs.org/dist/v$env:NODE_VERSION/node-v$env:NODE_VERSION-x64.msi -OutFile nodejs.msi; Start-Process msiexec.exe -Wait -ArgumentList '/qn /i nodejs.msi'; Remove-Item -Force nodejs.msi"
 
 WORKDIR C:\\app
 
