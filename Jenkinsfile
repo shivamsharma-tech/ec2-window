@@ -38,19 +38,20 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2') {
+               stage('Deploy to EC2') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH')]) {
                     powershell """
                         Write-Host 'Fixing SSH key permissions...'
-                        \$acl = Get-Acl "$env:KEY_PATH"
+                        \$keyPath = \$env:KEY_PATH
+                        \$acl = Get-Acl \$keyPath
                         \$acl.SetAccessRuleProtection(\$true, \$false)
-                        \$rule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:USERNAME", "Read", "Allow")
+                        \$rule = New-Object System.Security.AccessControl.FileSystemAccessRule("\$env:USERNAME", "Read", "Allow")
                         \$acl.SetAccessRule(\$rule)
-                        Set-Acl "$env:KEY_PATH" \$acl
+                        Set-Acl \$keyPath \$acl
 
                         Write-Host 'Deploying to EC2...'
-                        ssh -o StrictHostKeyChecking=no -i "$env:KEY_PATH" ${env.REMOTE_USER}@${env.REMOTE_HOST} `
+                        ssh -o StrictHostKeyChecking=no -i "\$keyPath" ${env.REMOTE_USER}@${env.REMOTE_HOST} `
                           "docker pull ${env.IMAGE_NAME}:${env.TAG} && `
                            docker stop ${env.CONTAINER_NAME} || true && `
                            docker rm ${env.CONTAINER_NAME} || true && `
@@ -59,6 +60,7 @@ pipeline {
                 }
             }
         }
+
     }
 
     post {
