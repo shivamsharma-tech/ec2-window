@@ -1,23 +1,32 @@
-# Use a Windows base image with Node.js pre-installed
+# ✅ Use a Windows base image
 FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
-# Download Node.js (manually, if needed)
-# OR pre-install in image, or use a custom image with Node
+# ✅ Set environment variable for Node.js version
+ENV NODE_VERSION=18.19.1
 
-# Set working directory
-WORKDIR /app
+# ✅ Download and install Node.js manually
+RUN powershell -Command `
+    Invoke-WebRequest -Uri "https://nodejs.org/dist/v${env:NODE_VERSION}/node-v${env:NODE_VERSION}-x64.msi" -OutFile "nodejs.msi" ; `
+    Start-Process msiexec.exe -Wait -ArgumentList '/qn /i nodejs.msi' ; `
+    Remove-Item -Force nodejs.msi
 
-# Copy app files
+# ✅ Create app directory
+WORKDIR C:/app
+
+# ✅ Copy package.json and install dependencies
+COPY package*.json ./
+RUN npm install
+
+# ✅ Copy the rest of the app
 COPY . .
 
-# Install dependencies
-RUN powershell -Command "npm install"
+# ✅ Build your app (e.g., React, Vue, etc.)
+RUN npm run build
 
-# Build the app
-RUN powershell -Command "npm run build"
+# ✅ Install 'serve' globally to host the static files
+RUN npm install -g serve
 
-# Expose port
+# ✅ Expose the port (match your frontend port)
 EXPOSE 3000
 
-# Start the app using `serve`
-CMD ["cmd.exe", "/c", "npx serve -s dist -l 3000"]
+# ✅ Start the stati
