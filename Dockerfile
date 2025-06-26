@@ -1,5 +1,6 @@
 # Use Windows Server Core 2022
-FROM mcr.microsoft.com/windows/servercore:ltsc2022
+FROM mcr.microsoft.com/windows/servercore:26100.1.240331-1435.ge_release
+
 
 # Set Node.js version
 ENV NODE_VERSION=18.19.1
