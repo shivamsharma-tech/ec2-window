@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'shivamsharam/ec2-window'
-        TAG = 'latest' // or use build number: "${env.BUILD_NUMBER}"
+        TAG = 'latest'
         REMOTE_USER = 'Administrator'
         REMOTE_HOST = '51.21.171.137'
         REMOTE_PORT = '22'
@@ -13,7 +13,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout Code') {
             steps {
                 checkout scm
@@ -29,7 +28,7 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Docker-access', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat """ 
+                    bat """
                         echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                     """
                 }
@@ -43,25 +42,24 @@ pipeline {
         }
 
         stage('Deploy to EC2') {
-    steps {
-        withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH')]) {
-            bat """
-                echo Fixing SSH key permissions...
-                icacls "%KEY_PATH%" /inheritance:r
-                for /F "delims=" %%u in ('whoami') do icacls "%KEY_PATH%" /grant:r "%%u:R"
-                
-                echo Deploying to EC2...
-                ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %REMOTE_USER%@%REMOTE_HOST% ^
-                  "docker pull ${IMAGE_NAME}:${TAG} ^
-                  && docker stop ${CONTAINER_NAME} || exit 0 ^
-                  && docker rm ${CONTAINER_NAME} || exit 0 ^
-                  && docker run -d --name ${CONTAINER_NAME} -p ${LOCAL_APP_PORT}:${REMOTE_APP_PORT} ${IMAGE_NAME}:${TAG} & exit"
-            """
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH')]) {
+                    bat """
+                        echo Fixing SSH key permissions...
+                        icacls "%KEY_PATH%" /inheritance:r
+                        for /F "delims=" %%u in ('whoami') do icacls "%KEY_PATH%" /grant:r "%%u:R"
+                        icacls "%KEY_PATH%" /grant:r "nt authority\\system:R"
+
+                        echo Deploying to EC2...
+                        ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %REMOTE_USER%@%REMOTE_HOST% ^
+                          "docker pull ${IMAGE_NAME}:${TAG} ^&
+                          docker stop ${CONTAINER_NAME} || exit 0 ^&
+                          docker rm ${CONTAINER_NAME} || exit 0 ^&
+                          docker run -d --name ${CONTAINER_NAME} -p ${REMOTE_APP_PORT}:${LOCAL_APP_PORT} ${IMAGE_NAME}:${TAG}"
+                    """
+                }
+            }
         }
-    }
-}
-
-
     }
 
     post {
