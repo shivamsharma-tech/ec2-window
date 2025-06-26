@@ -1,29 +1,20 @@
-# Use the correct base image for your Windows Server version
 FROM mcr.microsoft.com/windows/servercore:10.0.26100.1
 
-# Set Node.js version
 ENV NODE_VERSION=18.19.1
 
-# Download and install Node.js manually
+# Download and install Node.js silently
 RUN powershell -Command `
-    Invoke-WebRequest -Uri "https://nodejs.org/dist/v$env:NODE_VERSION/node-v$env:NODE_VERSION-x64.msi" -OutFile "nodejs.msi" ; `
+    Invoke-WebRequest -Uri https://nodejs.org/dist/v$env:NODE_VERSION/node-v$env:NODE_VERSION-x64.msi -OutFile nodejs.msi ; `
     Start-Process msiexec.exe -Wait -ArgumentList '/qn /i nodejs.msi' ; `
     Remove-Item -Force nodejs.msi
 
-# Set working directory
-WORKDIR /app
+WORKDIR C:\\app
 
-# Copy project files
-COPY . .
-
-# Install dependencies
+COPY package*.json ./
 RUN npm install
 
-# Build the app (optional)
-RUN npm run build
+COPY . .
 
-# Expose port
 EXPOSE 3000
 
-# Start the app
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
