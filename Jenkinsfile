@@ -1,66 +1,36 @@
 pipeline {
-    agent any
-
-    environment {
-        IMAGE_NAME = "shivamsharam/ec2-window"
-        IMAGE_TAG = "latest"
-        REMOTE_HOST = "51.21.171.137"
+  agent any
+  environment {
+    IMAGE = 'shivamsharam/ec2-window'
+    TAG = "${env.BUILD_NUMBER}"
+    REMOTE = 'Administrator@51.21.171.137'
+  }
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+    stage('Build') {
+      steps { bat "docker build -t %IMAGE%:%TAG% ." }
     }
-
-    stages {
-        stage('Checkout Code') {
-            steps {
-                checkout scm
-            }
+    stage('Docker Login') {
+      steps {
+        withCredentials([usernamePassword(credentialsId:'Docker-access', usernameVariable:'DU', passwordVariable:'DP')]) {
+          bat "echo %DP% | docker login -u %DU% --password-stdin"
         }
-
-        stage('Build Docker Image') {
-            steps {
-                bat "docker build -t %IMAGE_NAME%:%IMAGE_TAG% ."
-            }
-        }
-
-        stage('Login to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'Docker-access', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                bat "docker push %IMAGE_NAME%:%IMAGE_TAG%"
-            }
-        }
-
-        stage('Deploy on EC2') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'windows-ec2-key', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
-                    bat """
-                        echo Deploying to Windows EC2...
-
-                        set KEY_COPY=C:\\Users\\Administrator\\id_rsa
-                        copy "%KEY_PATH%" "%KEY_COPY%" > nul
-                        icacls "%KEY_COPY%" /inheritance:r > nul
-
-                        ssh -i "%KEY_COPY%" -o StrictHostKeyChecking=no %SSH_USER%@%REMOTE_HOST% ^
-                        "docker pull %IMAGE_NAME%:%IMAGE_TAG% && ^
-                         docker stop ec2-window || exit 0 && ^
-                         docker rm ec2-window || exit 0 && ^
-                         docker run -d --name ec2-window -p 3000:3000 %IMAGE_NAME%:%IMAGE_TAG%"
-                    """
-                }
-            }
-        }
+      }
     }
-
-    post {
-        success {
-            echo '✅ Deployment Successful!'
+    stage('Push') { steps { bat "docker push %IMAGE%:%TAG%" } }
+    stage('Deploy') {
+      steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2-key', keyFileVariable:'KEY')]) {
+          bat """
+            scp -i "%KEY%" -o StrictHostKeyChecking=no . %REMOTE%:C:/app/
+            ssh -i "%KEY%" -o StrictHostKeyChecking=no %REMOTE% "docker pull %IMAGE%:%TAG% && docker stop ec2-window || exit 0 && docker rm ec2-window || exit 0 && docker run -d --name ec2-window -p 3000:3000 %IMAGE%:%TAG%"
+          """
         }
-        failure {
-            echo '❌ Deployment Failed!'
-        }
+      }
     }
+  }
+  post {
+    success { echo '✅ Done' }
+    failure { echo '❌ Failed' }
+  }
 }
