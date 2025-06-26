@@ -1,25 +1,25 @@
-# Use Windows Server Core with LTSC 2022
+# Use Windows Server Core 2022
 FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
 # Set Node.js version
 ENV NODE_VERSION=18.19.1
 
-# Download and install Node.js silently
-RUN powershell -Command `
-    Invoke-WebRequest -Uri https://nodejs.org/dist/v$env:NODE_VERSION/node-v$env:NODE_VERSION-x64.msi -OutFile nodejs.msi ; `
-    Start-Process msiexec.exe -Wait -ArgumentList '/qn /i nodejs.msi' ; `
-    Remove-Item -Force nodejs.msi
+# Install Node.js (silent MSI install)
+RUN powershell -Command "Invoke-WebRequest -Uri https://nodejs.org/dist/v$env:NODE_VERSION/node-v$env:NODE_VERSION-x64.msi -OutFile nodejs.msi ; \
+    Start-Process msiexec.exe -Wait -ArgumentList '/qn /i nodejs.msi' ; \
+    Remove-Item -Force nodejs.msi"
 
 # Set working directory
 WORKDIR /app
 
-# Copy files
+# Copy project files
 COPY . .
 
-# Install dependencies and build the app
-RUN npm install && npm run build
+# Install dependencies & build app
+RUN npm install
+RUN npm run build
 
-# Install serve to serve the built files
+# Install static server
 RUN npm install -g serve
 
 # Expose port
