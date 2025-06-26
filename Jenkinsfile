@@ -36,11 +36,15 @@ pipeline {
 
         stage('Deploy on EC2') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2-key', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'windows-ec2-key', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
                     bat """
-                        echo Deploying to EC2...
+                        echo Deploying to Windows EC2...
 
-                        ssh -i %KEY_PATH% -o StrictHostKeyChecking=no %SSH_USER%@%REMOTE_HOST% ^
+                        set KEY_COPY=C:\\Users\\Administrator\\id_rsa
+                        copy "%KEY_PATH%" "%KEY_COPY%" > nul
+                        icacls "%KEY_COPY%" /inheritance:r > nul
+
+                        ssh -i "%KEY_COPY%" -o StrictHostKeyChecking=no %SSH_USER%@%REMOTE_HOST% ^
                         "docker pull %IMAGE_NAME%:%IMAGE_TAG% && ^
                          docker stop ec2-window || exit 0 && ^
                          docker rm ec2-window || exit 0 && ^
