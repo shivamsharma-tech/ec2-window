@@ -1,26 +1,23 @@
-# Use official lightweight Node.js image
-FROM node:18-alpine
+# Use a Windows base image with Node.js pre-installed
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
+
+# Download Node.js (manually, if needed)
+# OR pre-install in image, or use a custom image with Node
 
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and lock files first (for caching)
-COPY package*.json ./
-
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the application
+# Copy app files
 COPY . .
 
+# Install dependencies
+RUN powershell -Command "npm install"
+
 # Build the app
-RUN npm run build
+RUN powershell -Command "npm run build"
 
-# Install serve globally to serve the built files
-RUN npm install -g serve
-
-# Expose the desired port
+# Expose port
 EXPOSE 3000
 
-# Start the server
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Start the app using `serve`
+CMD ["cmd.exe", "/c", "npx serve -s dist -l 3000"]
