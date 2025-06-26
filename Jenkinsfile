@@ -2,13 +2,11 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'shivamsharam/ec2-window'
-        TAG = 'latest'
-        REMOTE_USER = 'Administrator'
-        REMOTE_HOST = '51.21.171.137'
-        CONTAINER_NAME = 'ec2-window'
-        REMOTE_APP_PORT = '3000'
-        LOCAL_APP_PORT = '3000'
+        IMAGE = 'shivamsharam/ec2-window:latest'
+        HOST = '51.21.171.137'
+        USER = 'Administrator'
+        CONTAINER = 'ec2-window'
+        PORT = '3000'
     }
 
     stages {
@@ -20,51 +18,36 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t %IMAGE_NAME%:%TAG% ."
+                bat "docker build -t %IMAGE% ."
             }
         }
 
-        stage('Login to Docker Hub') {
+        stage('Docker Login & Push') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Docker-access', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                bat "docker push %IMAGE_NAME%:%TAG%"
-            }
-        }
-
-               stage('Deploy to EC2') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH')]) {
                     bat """
-                        echo Fixing SSH key permissions...
-                        icacls "%KEY_PATH%" /inheritance:r
-                        for /F "delims=" %%u in ('whoami') do icacls "%KEY_PATH%" /grant:r "%%u:R"
-
-                        echo Deploying to EC2...
-                        ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" ${env.REMOTE_USER}@${env.REMOTE_HOST} ^
-                          "docker pull ${env.IMAGE_NAME}:${env.TAG} && ^
-                           docker stop ${env.CONTAINER_NAME} || exit 0 && ^
-                           docker rm ${env.CONTAINER_NAME} || exit 0 && ^
-                           docker run -d --name ${env.CONTAINER_NAME} -p ${env.REMOTE_APP_PORT}:${env.LOCAL_APP_PORT} ${env.IMAGE_NAME}:${env.TAG}"
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                        docker push %IMAGE%
                     """
                 }
             }
         }
 
+        stage('Deploy on EC2') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'ec2-admin-pass', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                    bat """
+                        echo Deploying to EC2...
+                        plink.exe -ssh %USER%@%HOST% -pw %SSH_PASS% ^
+                          "docker pull %IMAGE% && docker stop %CONTAINER% || exit 0 && docker rm %CONTAINER% || exit 0 && docker run -d --name %CONTAINER% -p %PORT%:%PORT% %IMAGE%"
+                    """
+                }
+            }
+        }
     }
 
     post {
-        success {
-            echo '✅ Deployment completed successfully.'
-        }
-        failure {
-            echo '❌ Deployment failed.'
-        }
+        success { echo '✅ Deployment successful.' }
+        failure { echo '❌ Deployment failed.' }
     }
 }
