@@ -40,7 +40,7 @@ pipeline {
                     bat """
                         echo Deploying to EC2...
 
-                        ssh -i %KEY_PATH% -o StrictHostKeyChecking=no %SSH_USER%@%REMOTE_HOST% ^
+                        ssh -i "%KEY_PATH%" -o StrictHostKeyChecking=no %SSH_USER%@%REMOTE_HOST% ^
                         "docker pull %IMAGE_NAME%:%IMAGE_TAG% && ^
                          docker stop ec2-window || exit 0 && ^
                          docker rm ec2-window || exit 0 && ^
