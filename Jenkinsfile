@@ -35,7 +35,7 @@ pipeline {
 
         stage('Deploy on EC2') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'ec2-admin-pass', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'window-ec2', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
                     bat """
                         echo Deploying to EC2...
                         plink.exe -ssh %USER%@%HOST% -pw %SSH_PASS% ^
