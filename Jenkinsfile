@@ -2,11 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE = 'shivamsharam/ec2-window:latest'
-        HOST = '51.21.171.137'
-        USER = 'Administrator'
-        CONTAINER = 'ec2-window'
-        PORT = '3000'
+        IMAGE_NAME = "shivamsharam/ec2-window"
+        IMAGE_TAG = "latest"
+        REMOTE_HOST = "51.21.171.137"
     }
 
     stages {
@@ -18,35 +16,47 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t %IMAGE% ."
+                bat "docker build -t %IMAGE_NAME%:%IMAGE_TAG% ."
             }
         }
 
-        stage('Docker Login & Push') {
+        stage('Login to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'Docker-access', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat """
-                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                        docker push %IMAGE%
-                    """
+                withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
                 }
             }
         }
 
-       stage('Deploy on EC2') {
-    withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2-key', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
-        bat """
-            echo Deploying using SSH key...
-            ssh -i %KEY_PATH% -o StrictHostKeyChecking=no %SSH_USER%@51.21.171.137 ^
-            "docker pull shivamsharam/ec2-window:latest && docker stop ec2-window || exit 0 && docker rm ec2-window || exit 0 && docker run -d --name ec2-window -p 3000:3000 shivamsharam/ec2-window:latest"
-        """
-    }
-}
+        stage('Push Docker Image') {
+            steps {
+                bat "docker push %IMAGE_NAME%:%IMAGE_TAG%"
+            }
+        }
 
+        stage('Deploy on EC2') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2-key', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
+                    bat """
+                        echo Deploying to EC2...
+
+                        ssh -i %KEY_PATH% -o StrictHostKeyChecking=no %SSH_USER%@%REMOTE_HOST% ^
+                        "docker pull %IMAGE_NAME%:%IMAGE_TAG% && ^
+                         docker stop ec2-window || exit 0 && ^
+                         docker rm ec2-window || exit 0 && ^
+                         docker run -d --name ec2-window -p 3000:3000 %IMAGE_NAME%:%IMAGE_TAG%"
+                    """
+                }
+            }
+        }
     }
 
     post {
-        success { echo '✅ Deployment successful.' }
-        failure { echo '❌ Deployment failed.' }
+        success {
+            echo '✅ Deployment Successful!'
+        }
+        failure {
+            echo '❌ Deployment Failed!'
+        }
     }
 }
