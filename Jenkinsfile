@@ -35,13 +35,13 @@ pipeline {
 
         stage('Deploy on EC2') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'window-ec2', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                    bat """
-                        echo Deploying to EC2...
-                        plink.exe -ssh %USER%@%HOST% -pw %SSH_PASS% ^
-                          "docker pull %IMAGE% && docker stop %CONTAINER% || exit 0 && docker rm %CONTAINER% || exit 0 && docker run -d --name %CONTAINER% -p %PORT%:%PORT% %IMAGE%"
-                    """
-                }
+               withCredentials([usernamePassword(credentialsId: 'window-ec2', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+    bat """
+        echo Deploying to EC2...
+        powershell -Command "sshpass -p '%SSH_PASS%' ssh -o StrictHostKeyChecking=no %SSH_USER%@%HOST% 'docker pull %IMAGE% && docker stop %CONTAINER% || exit 0 && docker rm %CONTAINER% || exit 0 && docker run -d --name %CONTAINER% -p %PORT%:%PORT% %IMAGE%'"
+    """
+}
+
             }
         }
     }
