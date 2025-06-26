@@ -43,19 +43,24 @@ pipeline {
         }
 
         stage('Deploy to EC2') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH')]) {
-                    bat """
-                        echo Deploying to EC2...
-                        ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %REMOTE_USER%@%REMOTE_HOST% ^
-                          "docker pull ${IMAGE_NAME}:${TAG} ^
-                          && docker stop ${CONTAINER_NAME} || exit 0 ^
-                          && docker rm ${CONTAINER_NAME} || exit 0 ^
-                          && docker run -d --name ${CONTAINER_NAME} -p ${LOCAL_APP_PORT}:${REMOTE_APP_PORT} ${IMAGE_NAME}:${TAG} & exit"
-                    """
-                }
-            }
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2', keyFileVariable: 'KEY_PATH')]) {
+            bat """
+                echo Fixing SSH key permissions...
+                icacls "%KEY_PATH%" /inheritance:r
+                for /F "delims=" %%u in ('whoami') do icacls "%KEY_PATH%" /grant:r "%%u:R"
+                
+                echo Deploying to EC2...
+                ssh -o StrictHostKeyChecking=no -i "%KEY_PATH%" %REMOTE_USER%@%REMOTE_HOST% ^
+                  "docker pull ${IMAGE_NAME}:${TAG} ^
+                  && docker stop ${CONTAINER_NAME} || exit 0 ^
+                  && docker rm ${CONTAINER_NAME} || exit 0 ^
+                  && docker run -d --name ${CONTAINER_NAME} -p ${LOCAL_APP_PORT}:${REMOTE_APP_PORT} ${IMAGE_NAME}:${TAG} & exit"
+            """
         }
+    }
+}
+
 
     }
 
