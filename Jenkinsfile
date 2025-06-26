@@ -33,17 +33,16 @@ pipeline {
             }
         }
 
-        stage('Deploy on EC2') {
-            steps {
-               withCredentials([usernamePassword(credentialsId: 'window-ec2', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-    bat """
-        echo Deploying to EC2...
-        powershell -Command "sshpass -p '%SSH_PASS%' ssh -o StrictHostKeyChecking=no %SSH_USER%@%HOST% 'docker pull %IMAGE% && docker stop %CONTAINER% || exit 0 && docker rm %CONTAINER% || exit 0 && docker run -d --name %CONTAINER% -p %PORT%:%PORT% %IMAGE%'"
-    """
+       stage('Deploy on EC2') {
+    withCredentials([sshUserPrivateKey(credentialsId: 'window-ec2-key', keyFileVariable: 'KEY_PATH', usernameVariable: 'SSH_USER')]) {
+        bat """
+            echo Deploying using SSH key...
+            ssh -i %KEY_PATH% -o StrictHostKeyChecking=no %SSH_USER%@51.21.171.137 ^
+            "docker pull shivamsharam/ec2-window:latest && docker stop ec2-window || exit 0 && docker rm ec2-window || exit 0 && docker run -d --name ec2-window -p 3000:3000 shivamsharam/ec2-window:latest"
+        """
+    }
 }
 
-            }
-        }
     }
 
     post {
