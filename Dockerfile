@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/windows/servercore:preview
+FROM mcr.microsoft.com/windows/servercore:10.0.26100.1
 
 
 ENV NODE_VERSION=18.19.1
